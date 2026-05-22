@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"social-notif/internal/handler"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,9 +24,8 @@ func APIKeyAuth(expectedKey string) gin.HandlerFunc {
 		}
 
 		if subtle.ConstantTimeCompare([]byte(token), []byte(expectedKey)) != 1 {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "unauthorized",
-			})
+			handler.RespondError(c, http.StatusUnauthorized, "unauthorized", "invalid api key")
+			c.Abort()
 			return
 		}
 

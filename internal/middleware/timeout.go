@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"social-notif/internal/handler"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,9 +24,8 @@ func Timeout(timeout time.Duration) gin.HandlerFunc {
 		c.Next()
 
 		if ctx.Err() == context.DeadlineExceeded && !c.Writer.Written() {
-			c.AbortWithStatusJSON(http.StatusGatewayTimeout, gin.H{
-				"error": "request_timeout",
-			})
+			handler.RespondError(c, http.StatusGatewayTimeout, "request_timeout", "request timed out")
+			c.Abort()
 		}
 	}
 }

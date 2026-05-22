@@ -27,7 +27,7 @@ func NewHealthHandler(db *gorm.DB, redisClient *redis.Client, dbCfg config.Datab
 }
 
 func (h *HealthHandler) Liveness(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{
+	Respond(c, http.StatusOK, gin.H{
 		"status": "ok",
 	})
 }
@@ -38,19 +38,19 @@ func (h *HealthHandler) Readiness(c *gin.Context) {
 
 	if h.db != nil {
 		if err := repository.CheckPostgres(ctx, h.db); err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unavailable", "dependency": "postgres"})
+			RespondError(c, http.StatusServiceUnavailable, "dependency_unavailable", "postgres is unavailable")
 			return
 		}
 	}
 
 	if h.redis != nil {
 		if err := h.redis.Ping(ctx).Err(); err != nil {
-			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unavailable", "dependency": "redis"})
+			RespondError(c, http.StatusServiceUnavailable, "dependency_unavailable", "redis is unavailable")
 			return
 		}
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	Respond(c, http.StatusOK, gin.H{
 		"status": "ready",
 	})
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"social-notif/internal/domain"
 	"social-notif/internal/model"
 
 	"github.com/google/uuid"
@@ -14,9 +15,9 @@ import (
 var ErrMessageNotFound = errors.New("message not found")
 
 type MessageRepository interface {
-	Create(ctx context.Context, message *model.Message) error
-	UpdateStatus(ctx context.Context, id uuid.UUID, status model.MessageStatus) error
-	GetByID(ctx context.Context, id uuid.UUID) (*model.Message, error)
+	Create(ctx context.Context, message *domain.Message) error
+	UpdateStatus(ctx context.Context, id uuid.UUID, status domain.MessageStatus) error
+	GetByID(ctx context.Context, id uuid.UUID) (*domain.Message, error)
 }
 
 type GormMessageRepository struct {
@@ -27,17 +28,19 @@ func NewMessageRepository(db *gorm.DB) MessageRepository {
 	return &GormMessageRepository{db: db}
 }
 
-func (r *GormMessageRepository) Create(ctx context.Context, message *model.Message) error {
-	if err := r.db.WithContext(ctx).Create(message).Error; err != nil {
+func (r *GormMessageRepository) Create(ctx context.Context, message *domain.Message) error {
+	record := model.MessageRecordFromDomain(message)
+	if err := r.db.WithContext(ctx).Create(record).Error; err != nil {
 		return fmt.Errorf("create message: %w", err)
 	}
 
+	*message = *record.ToDomain()
 	return nil
 }
 
-func (r *GormMessageRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status model.MessageStatus) error {
+func (r *GormMessageRepository) UpdateStatus(ctx context.Context, id uuid.UUID, status domain.MessageStatus) error {
 	result := r.db.WithContext(ctx).
-		Model(&model.Message{}).
+		Model(&model.MessageRecord{}).
 		Where("id = ?", id).
 		Update("status", status)
 	if result.Error != nil {
@@ -50,14 +53,14 @@ func (r *GormMessageRepository) UpdateStatus(ctx context.Context, id uuid.UUID, 
 	return nil
 }
 
-func (r *GormMessageRepository) GetByID(ctx context.Context, id uuid.UUID) (*model.Message, error) {
-	var message model.Message
-	if err := r.db.WithContext(ctx).First(&message, "id = ?", id).Error; err != nil {
+func (r *GormMessageRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Message, error) {
+	var record model.MessageRecord
+	if err := r.db.WithContext(ctx).First(&record, "id = ?", id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, fmt.Errorf("get message by id: %w", ErrMessageNotFound)
 		}
 		return nil, fmt.Errorf("get message by id: %w", err)
 	}
 
-	return &message, nil
+	return record.ToDomain(), nil
 }

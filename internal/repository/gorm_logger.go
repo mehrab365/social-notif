@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"go.uber.org/zap"
@@ -33,21 +34,21 @@ func (l *GormLogger) Info(ctx context.Context, msg string, data ...any) {
 	if l.level < logger.Info {
 		return
 	}
-	l.logger.Info(msg, zap.Any("data", data))
+	l.logger.Info(fmt.Sprintf(msg, data...))
 }
 
 func (l *GormLogger) Warn(ctx context.Context, msg string, data ...any) {
 	if l.level < logger.Warn {
 		return
 	}
-	l.logger.Warn(msg, zap.Any("data", data))
+	l.logger.Warn(fmt.Sprintf(msg, data...))
 }
 
 func (l *GormLogger) Error(ctx context.Context, msg string, data ...any) {
 	if l.level < logger.Error {
 		return
 	}
-	l.logger.Error(msg, zap.Any("data", data))
+	l.logger.Error(fmt.Sprintf(msg, data...))
 }
 
 func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {

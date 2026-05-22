@@ -1,4 +1,4 @@
-package repository
+package repository_test
 
 import (
 	"context"
@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"social-notif/internal/model"
+	"social-notif/internal/domain"
+	"social-notif/internal/repository"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
@@ -20,12 +21,12 @@ func TestGormMessageRepository_Create(t *testing.T) {
 	db, mock, cleanup := newMockGormDB(t)
 	defer cleanup()
 
-	repo := NewMessageRepository(db)
-	msg := &model.Message{
+	repo := repository.NewMessageRepository(db)
+	msg := &domain.Message{
 		ID:          uuid.New(),
 		PhoneNumber: "+15551234567",
 		Body:        "hello",
-		Status:      model.MessageStatusPending,
+		Status:      domain.MessageStatusPending,
 		RetryCount:  0,
 	}
 
@@ -56,16 +57,16 @@ func TestGormMessageRepository_UpdateStatus(t *testing.T) {
 	db, mock, cleanup := newMockGormDB(t)
 	defer cleanup()
 
-	repo := NewMessageRepository(db)
+	repo := repository.NewMessageRepository(db)
 	id := uuid.New()
 
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "messages" SET "status"=$1,"updated_at"=$2 WHERE id = $3`)).
-		WithArgs(model.MessageStatusSent, sqlmock.AnyArg(), id).
+		WithArgs(domain.MessageStatusSent, sqlmock.AnyArg(), id).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectCommit()
 
-	if err := repo.UpdateStatus(context.Background(), id, model.MessageStatusSent); err != nil {
+	if err := repo.UpdateStatus(context.Background(), id, domain.MessageStatusSent); err != nil {
 		t.Fatalf("UpdateStatus() error = %v", err)
 	}
 
@@ -78,17 +79,17 @@ func TestGormMessageRepository_UpdateStatus_NotFound(t *testing.T) {
 	db, mock, cleanup := newMockGormDB(t)
 	defer cleanup()
 
-	repo := NewMessageRepository(db)
+	repo := repository.NewMessageRepository(db)
 	id := uuid.New()
 
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "messages" SET "status"=$1,"updated_at"=$2 WHERE id = $3`)).
-		WithArgs(model.MessageStatusSent, sqlmock.AnyArg(), id).
+		WithArgs(domain.MessageStatusSent, sqlmock.AnyArg(), id).
 		WillReturnResult(sqlmock.NewResult(0, 0))
 	mock.ExpectCommit()
 
-	err := repo.UpdateStatus(context.Background(), id, model.MessageStatusSent)
-	if !errors.Is(err, ErrMessageNotFound) {
+	err := repo.UpdateStatus(context.Background(), id, domain.MessageStatusSent)
+	if !errors.Is(err, repository.ErrMessageNotFound) {
 		t.Fatalf("UpdateStatus() error = %v, want ErrMessageNotFound", err)
 	}
 
@@ -101,7 +102,7 @@ func TestGormMessageRepository_GetByID(t *testing.T) {
 	db, mock, cleanup := newMockGormDB(t)
 	defer cleanup()
 
-	repo := NewMessageRepository(db)
+	repo := repository.NewMessageRepository(db)
 	id := uuid.New()
 	createdAt := time.Now().UTC()
 	updatedAt := createdAt.Add(time.Minute)
@@ -119,7 +120,7 @@ func TestGormMessageRepository_GetByID(t *testing.T) {
 		id,
 		"+15551234567",
 		"hello",
-		model.MessageStatusQueued,
+		domain.MessageStatusQueued,
 		[]byte(`{"id":"wamid.123"}`),
 		2,
 		createdAt,
@@ -137,8 +138,8 @@ func TestGormMessageRepository_GetByID(t *testing.T) {
 	if msg.ID != id {
 		t.Fatalf("GetByID() id = %s, want %s", msg.ID, id)
 	}
-	if msg.Status != model.MessageStatusQueued {
-		t.Fatalf("GetByID() status = %s, want %s", msg.Status, model.MessageStatusQueued)
+	if msg.Status != domain.MessageStatusQueued {
+		t.Fatalf("GetByID() status = %s, want %s", msg.Status, domain.MessageStatusQueued)
 	}
 	if msg.RetryCount != 2 {
 		t.Fatalf("GetByID() retry count = %d, want 2", msg.RetryCount)
@@ -153,7 +154,7 @@ func TestGormMessageRepository_GetByID_NotFound(t *testing.T) {
 	db, mock, cleanup := newMockGormDB(t)
 	defer cleanup()
 
-	repo := NewMessageRepository(db)
+	repo := repository.NewMessageRepository(db)
 	id := uuid.New()
 
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "messages" WHERE id = $1 ORDER BY "messages"."id" LIMIT $2`)).
@@ -173,7 +174,7 @@ func TestGormMessageRepository_GetByID_NotFound(t *testing.T) {
 	if errMsg != nil {
 		t.Fatalf("GetByID() message = %v, want nil", errMsg)
 	}
-	if !errors.Is(err, ErrMessageNotFound) {
+	if !errors.Is(err, repository.ErrMessageNotFound) {
 		t.Fatalf("GetByID() error = %v, want ErrMessageNotFound", err)
 	}
 

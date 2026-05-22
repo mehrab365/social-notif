@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"social-notif/internal/model"
+	"social-notif/internal/domain"
 )
 
 type CreateMessageRequest struct {
@@ -13,19 +13,19 @@ type CreateMessageRequest struct {
 }
 
 type MessageResponse struct {
-	ID               string              `json:"id"`
-	PhoneNumber      string              `json:"phone_number"`
-	Body             string              `json:"body"`
-	Status           model.MessageStatus `json:"status"`
-	ProviderResponse json.RawMessage     `json:"provider_response,omitempty"`
-	RetryCount       int                 `json:"retry_count"`
-	CreatedAt        time.Time           `json:"created_at"`
-	UpdatedAt        time.Time           `json:"updated_at"`
+	ID               string               `json:"id"`
+	PhoneNumber      string               `json:"phone_number"`
+	Body             string               `json:"body"`
+	Status           domain.MessageStatus `json:"status"`
+	ProviderResponse json.RawMessage      `json:"provider_response,omitempty"`
+	RetryCount       int                  `json:"retry_count"`
+	CreatedAt        time.Time            `json:"created_at"`
+	UpdatedAt        time.Time            `json:"updated_at"`
 }
 
 type MessageStatusResponse struct {
-	ID         string              `json:"id"`
-	Status     model.MessageStatus `json:"status"`
-	RetryCount int                 `json:"retry_count"`
-	UpdatedAt  time.Time           `json:"updated_at"`
+	ID         string               `json:"id"`
+	Status     domain.MessageStatus `json:"status"`
+	RetryCount int                  `json:"retry_count"`
+	UpdatedAt  time.Time            `json:"updated_at"`
 }

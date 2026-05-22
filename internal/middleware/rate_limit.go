@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"social-notif/internal/handler"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -54,9 +56,8 @@ func RateLimit(limitPerMinute int) gin.HandlerFunc {
 
 		if !allowed {
 			c.Header("Retry-After", strconvFormatFloat(reset))
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{
-				"error": "rate_limited",
-			})
+			handler.RespondError(c, http.StatusTooManyRequests, "rate_limited", "rate limit exceeded")
+			c.Abort()
 			return
 		}
 

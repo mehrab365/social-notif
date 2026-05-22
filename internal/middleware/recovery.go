@@ -3,6 +3,8 @@ package middleware
 import (
 	"net/http"
 
+	"social-notif/internal/handler"
+
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 )
@@ -14,8 +16,7 @@ func Recovery(logger *zap.Logger) gin.HandlerFunc {
 			zap.Any("request_id", requestID),
 			zap.Any("panic", recovered),
 		)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": "internal_server_error",
-		})
+		handler.RespondError(c, http.StatusInternalServerError, "internal_server_error", "internal server error")
+		c.Abort()
 	})
 }

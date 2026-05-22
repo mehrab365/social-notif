@@ -1,11 +1,12 @@
 APP_NAME := social-notif
 
-.PHONY: help run-api run-worker test lint fmt tidy docker-up docker-down docker-logs build-api build-worker
+.PHONY: help run-api run-worker migrate test lint fmt tidy docker-up docker-down docker-logs build-api build-worker
 
 help:
 	@echo "Available targets:"
 	@echo "  run-api       Run the HTTP API"
 	@echo "  run-worker    Run the background worker"
+	@echo "  migrate       Run database migrations"
 	@echo "  test          Run tests"
 	@echo "  lint          Run go vet"
 	@echo "  fmt           Format Go code"
@@ -21,6 +22,9 @@ run-api:
 
 run-worker:
 	go run ./cmd/worker
+
+migrate:
+	go run ./cmd/migrate
 
 test:
 	go test ./...

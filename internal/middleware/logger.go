@@ -13,19 +13,31 @@ func Logger(logger *zap.Logger) gin.HandlerFunc {
 		c.Next()
 
 		requestID, _ := c.Get(RequestIDKey)
+		path := c.FullPath()
+		if path == "" {
+			path = c.Request.URL.Path
+		}
+
+		statusCode := c.Writer.Status()
+		latency := time.Since(startedAt)
 		fields := []zap.Field{
 			zap.Any("request_id", requestID),
+			zap.Duration("latency", latency),
+			zap.Int("status_code", statusCode),
 			zap.String("method", c.Request.Method),
-			zap.String("path", c.FullPath()),
-			zap.Int("status", c.Writer.Status()),
-			zap.Int("bytes", c.Writer.Size()),
-			zap.Duration("duration", time.Since(startedAt)),
+			zap.String("path", path),
 			zap.String("client_ip", c.ClientIP()),
+			zap.Int("response_bytes", c.Writer.Size()),
 		}
 
 		if len(c.Errors) > 0 {
 			fields = append(fields, zap.String("errors", c.Errors.String()))
-			logger.Warn("http request completed with errors", fields...)
+			logger.Error("http request completed with errors", fields...)
+			return
+		}
+
+		if statusCode >= 500 {
+			logger.Error("http request completed with server error", fields...)
 			return
 		}
 

@@ -46,7 +46,7 @@ func NewRouter(deps Dependencies) http.Handler {
 	router.GET("/readyz", healthHandler.Readiness)
 
 	v1 := router.Group("/api/v1")
-	v1.Use(middleware.APIKeyAuth(deps.Config.Security.APIKey))
+	v1.Use(middleware.APIKeyAuth(deps.Config.Security.APIKey, deps.Logger))
 	{
 		v1.GET("/health", healthHandler.Readiness)
 	}

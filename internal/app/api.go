@@ -9,9 +9,13 @@ import (
 
 	"social-notif/internal/api"
 	"social-notif/internal/config"
+	"social-notif/internal/handler"
+	"social-notif/internal/queue"
 	"social-notif/internal/repository"
+	"social-notif/internal/service"
 	"social-notif/internal/worker"
 
+	"github.com/hibiken/asynq"
 	"go.uber.org/zap"
 )
 
@@ -39,11 +43,18 @@ func RunAPI(ctx context.Context) error {
 		logger.Fatal("failed to initialize redis", zap.Error(err))
 	}
 
+	msgRepo := repository.NewMessageRepository(db)
+	asynqClient := asynq.NewClient(worker.AsynqRedisOptions(cfg.Redis))
+	msgQueue := queue.NewAsynqMessageQueue(asynqClient)
+	msgSvc := service.NewMessageService(msgRepo, msgQueue, logger)
+	msgHandler := handler.NewMessageHandler(msgSvc, logger)
+
 	router := api.NewRouter(api.Dependencies{
-		Config: cfg,
-		Logger: logger,
-		DB:     db,
-		Redis:  redisClient,
+		Config:         cfg,
+		Logger:         logger,
+		DB:             db,
+		Redis:          redisClient,
+		MessageHandler: msgHandler,
 	})
 
 	server := &http.Server{
@@ -71,6 +82,8 @@ func RunAPI(ctx context.Context) error {
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("api server shutdown failed", zap.Error(err))
 	}
+
+	asynqClient.Close()
 
 	if err := repository.ClosePostgres(db, logger); err != nil {
 		logger.Error("database close failed", zap.Error(err))

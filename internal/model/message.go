@@ -19,6 +19,9 @@ type MessageRecord struct {
 	RetryCount       int                  `gorm:"column:retry_count;not null;default:0"`
 	CreatedAt        time.Time            `gorm:"column:created_at;not null;autoCreateTime"`
 	UpdatedAt        time.Time            `gorm:"column:updated_at;not null;autoUpdateTime"`
+	TemplateName     string               `gorm:"column:template_name;type:varchar(128)"`
+	TemplateLanguage string               `gorm:"column:template_language;type:varchar(16);not null;default:'en_US'"`
+	TemplateParams   json.RawMessage      `gorm:"column:template_params;type:jsonb"`
 }
 
 func (MessageRecord) TableName() string {
@@ -50,6 +53,9 @@ func MessageRecordFromDomain(message *domain.Message) *MessageRecord {
 		RetryCount:       message.RetryCount,
 		CreatedAt:        message.CreatedAt,
 		UpdatedAt:        message.UpdatedAt,
+		TemplateName:     message.TemplateName,
+		TemplateLanguage: message.TemplateLanguage,
+		TemplateParams:   message.TemplateParams,
 	}
 }
 
@@ -67,5 +73,8 @@ func (m *MessageRecord) ToDomain() *domain.Message {
 		RetryCount:       m.RetryCount,
 		CreatedAt:        m.CreatedAt,
 		UpdatedAt:        m.UpdatedAt,
+		TemplateName:     m.TemplateName,
+		TemplateLanguage: m.TemplateLanguage,
+		TemplateParams:   m.TemplateParams,
 	}
 }

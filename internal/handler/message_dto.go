@@ -8,8 +8,11 @@ import (
 )
 
 type CreateMessageRequest struct {
-	PhoneNumber string `json:"phone_number" binding:"required,e164,max=32"`
-	Body        string `json:"body" binding:"required,min=1,max=4096"`
+	PhoneNumber        string   `json:"phone_number" binding:"required,e164,max=32"`
+	Body               string   `json:"body" binding:"required,min=1,max=4096"`
+	TemplateName       string   `json:"template_name,omitempty"`
+	TemplateLanguage   string   `json:"template_language,omitempty"`
+	TemplateBodyParams []string `json:"template_body_params,omitempty"`
 }
 
 type MessageResponse struct {

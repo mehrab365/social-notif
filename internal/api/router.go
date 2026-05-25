@@ -14,10 +14,11 @@ import (
 )
 
 type Dependencies struct {
-	Config *config.Config
-	Logger *zap.Logger
-	DB     *gorm.DB
-	Redis  *redis.Client
+	Config         *config.Config
+	Logger         *zap.Logger
+	DB             *gorm.DB
+	Redis          *redis.Client
+	MessageHandler *handler.MessageHandler
 }
 
 func NewRouter(deps Dependencies) http.Handler {
@@ -49,6 +50,10 @@ func NewRouter(deps Dependencies) http.Handler {
 	v1.Use(middleware.APIKeyAuth(deps.Config.Security.APIKey, deps.Logger))
 	{
 		v1.GET("/health", healthHandler.Readiness)
+
+		if deps.MessageHandler != nil {
+			v1.POST("/messages/whatsapp", deps.MessageHandler.CreateWhatsApp)
+		}
 	}
 
 	return router

@@ -18,6 +18,15 @@ const (
 	MessageStatusFailedPermanent MessageStatus = "failed_permanent"
 )
 
+type TemplateParams struct {
+	Body []TemplateParam `json:"body,omitempty"`
+}
+
+type TemplateParam struct {
+	Type string `json:"type"`
+	Text string `json:"text"`
+}
+
 type Message struct {
 	ID               uuid.UUID
 	PhoneNumber      string
@@ -27,6 +36,9 @@ type Message struct {
 	RetryCount       int
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
+	TemplateName     string
+	TemplateLanguage string
+	TemplateParams   json.RawMessage
 }
 
 func (m *Message) EnsureDefaults() {

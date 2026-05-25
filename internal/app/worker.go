@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"social-notif/internal/config"
+	"social-notif/internal/provider"
 	"social-notif/internal/repository"
 	"social-notif/internal/worker"
 
@@ -31,6 +32,9 @@ func RunWorker(ctx context.Context) error {
 		logger.Fatal("failed to initialize database", zap.Error(err))
 	}
 
+	msgRepo := repository.NewMessageRepository(db)
+	whatsAppClient := provider.NewMetaWhatsAppClient(cfg.WhatsApp)
+
 	redisOpt := worker.AsynqRedisOptions(cfg.Redis)
 	server := asynq.NewServer(redisOpt, asynq.Config{
 		Concurrency: cfg.Queue.Concurrency,
@@ -42,9 +46,11 @@ func RunWorker(ctx context.Context) error {
 
 	mux := asynq.NewServeMux()
 	worker.RegisterHandlers(mux, worker.Dependencies{
-		Config: cfg,
-		Logger: logger,
-		DB:     db,
+		Config:      cfg,
+		Logger:      logger,
+		DB:          db,
+		MessageRepo: msgRepo,
+		Provider:    whatsAppClient,
 	})
 
 	go func() {

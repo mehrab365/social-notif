@@ -20,6 +20,13 @@ type Config struct {
 	Security SecurityConfig
 	Logging  LoggingConfig
 	WhatsApp WhatsAppConfig
+	Shopify  ShopifyConfig
+}
+
+type ShopifyConfig struct {
+	APIKey    string
+	APISecret string
+	AppURL    string
 }
 
 type AppConfig struct {
@@ -127,6 +134,11 @@ func loadFromEnv(env envReader) (*Config, error) {
 		},
 		Security: SecurityConfig{
 			APIKey: getStringEnv(env, "API_KEY", ""),
+		},
+		Shopify: ShopifyConfig{
+			APIKey:    getStringEnv(env, "SHOPIFY_API_KEY", ""),
+			APISecret: getStringEnv(env, "SHOPIFY_API_SECRET", ""),
+			AppURL:    getStringEnv(env, "SHOPIFY_APP_URL", ""),
 		},
 		Logging: LoggingConfig{
 			Level: getStringEnv(env, "LOG_LEVEL", "info"),
@@ -267,7 +279,6 @@ func (c *Config) Validate() error {
 	if c.Security.MaxRequestBytes <= 0 {
 		errs = append(errs, "MAX_REQUEST_BYTES must be greater than zero")
 	}
-
 	if !isValidLogLevel(c.Logging.Level) {
 		errs = append(errs, "LOG_LEVEL must be one of debug, info, warn, error, dpanic, panic, fatal")
 	}
@@ -283,7 +294,7 @@ func (c *Config) Validate() error {
 	if c.WhatsApp.Timeout <= 0 {
 		errs = append(errs, "WHATSAPP_TIMEOUT must be greater than zero")
 	}
-	if c.App.Env != "local" {
+	if c.App.Env != "local" && c.Shopify.APIKey == "" {
 		if c.WhatsApp.AccessToken == "" {
 			errs = append(errs, "WHATSAPP_ACCESS_TOKEN is required outside local environment")
 		}

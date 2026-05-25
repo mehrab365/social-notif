@@ -1,0 +1,3 @@
+ALTER TABLE shops
+  ADD COLUMN setup_token VARCHAR(64),
+  ADD COLUMN webhook_id BIGINT NOT NULL DEFAULT 0;

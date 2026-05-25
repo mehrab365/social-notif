@@ -39,6 +39,7 @@ type Message struct {
 	TemplateName     string
 	TemplateLanguage string
 	TemplateParams   json.RawMessage
+	ShopID           string
 }
 
 func (m *Message) EnsureDefaults() {

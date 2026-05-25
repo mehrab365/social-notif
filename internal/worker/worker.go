@@ -18,6 +18,19 @@ import (
 	"gorm.io/gorm"
 )
 
+type ProviderFactory interface {
+	NewClient(accessToken, phoneNumberID string) provider.WhatsAppProvider
+}
+
+type DefaultProviderFactory struct {
+	BaseURL    string
+	APIVersion string
+}
+
+func (f *DefaultProviderFactory) NewClient(accessToken, phoneNumberID string) provider.WhatsAppProvider {
+	return provider.NewMetaWhatsAppClientFromConfig(f.BaseURL, f.APIVersion, phoneNumberID, accessToken)
+}
+
 const TaskDeliverWhatsAppMessage = "whatsapp:deliver_message"
 
 type MessageDeliveryPayload struct {
@@ -25,11 +38,13 @@ type MessageDeliveryPayload struct {
 }
 
 type Dependencies struct {
-	Config      *config.Config
-	Logger      *zap.Logger
-	DB          *gorm.DB
-	MessageRepo repository.MessageRepository
-	Provider    provider.WhatsAppProvider
+	Config          *config.Config
+	Logger          *zap.Logger
+	DB              *gorm.DB
+	MessageRepo     repository.MessageRepository
+	ShopRepo        repository.ShopRepository
+	Provider        provider.WhatsAppProvider
+	ProviderFactory ProviderFactory
 }
 
 func RegisterHandlers(mux *asynq.ServeMux, deps Dependencies) {
@@ -83,7 +98,8 @@ func (h *DeliveryHandler) Handle(ctx context.Context, task *asynq.Task) error {
 		logger.Error("failed to increment retry count", zap.Error(err))
 	}
 
-	resp, err := h.deps.Provider.SendMessage(ctx, provider.SendMessageRequest{
+	p := h.resolveProvider(ctx, msg, logger)
+	resp, err := p.SendMessage(ctx, provider.SendMessageRequest{
 		PhoneNumber:      msg.PhoneNumber,
 		Body:             msg.Body,
 		TemplateName:     msg.TemplateName,
@@ -118,6 +134,35 @@ func (h *DeliveryHandler) Handle(ctx context.Context, task *asynq.Task) error {
 		zap.String("provider_message_id", resp.MessageID),
 	)
 	return nil
+}
+
+func (h *DeliveryHandler) resolveProvider(ctx context.Context, msg *domain.Message, logger *zap.Logger) provider.WhatsAppProvider {
+	if msg.ShopID == "" {
+		return h.deps.Provider
+	}
+
+	shop, err := h.deps.ShopRepo.GetByID(ctx, msg.ShopID)
+	if err != nil {
+		logger.Warn("failed to look up shop for message, using default provider",
+			zap.String("shop_id", msg.ShopID),
+			zap.Error(err),
+		)
+		return h.deps.Provider
+	}
+
+	if shop.WhatsAppAccessToken == "" || shop.WhatsAppPhoneNumberID == "" {
+		logger.Warn("shop has no whatsapp credentials, using default provider",
+			zap.String("shop_id", msg.ShopID),
+			zap.String("shop_domain", shop.ShopDomain),
+		)
+		return h.deps.Provider
+	}
+
+	logger.Info("using per-shop whatsapp provider",
+		zap.String("shop_id", msg.ShopID),
+		zap.String("shop_domain", shop.ShopDomain),
+	)
+	return h.deps.ProviderFactory.NewClient(shop.WhatsAppAccessToken, shop.WhatsAppPhoneNumberID)
 }
 
 func classifyProviderError(err error) domain.MessageStatus {

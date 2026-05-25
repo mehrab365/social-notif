@@ -10,11 +10,13 @@ import (
 	"social-notif/internal/queue"
 	"social-notif/internal/repository"
 
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 )
 
 type MessageService interface {
 	EnqueueWhatsAppMessage(ctx context.Context, input EnqueueWhatsAppMessageInput) (EnqueueWhatsAppMessageResult, error)
+	EnqueueWhatsAppMessageForShop(ctx context.Context, shop *domain.Shop, phoneNumber, body string, templateBodyParams []string) (EnqueueWhatsAppMessageResult, error)
 }
 
 type EnqueueWhatsAppMessageInput struct {
@@ -87,6 +89,63 @@ func (s *MessageServiceImpl) EnqueueWhatsAppMessage(ctx context.Context, input E
 	if err := s.queue.EnqueueMessageDelivery(ctx, msg.ID); err != nil {
 		s.logger.Error("message persisted but enqueue failed, leaving as pending",
 			zap.String("message_id", msg.ID.String()),
+			zap.Error(err),
+		)
+		recordErr := s.repo.UpdateStatus(ctx, msg.ID, domain.MessageStatusPending)
+		if recordErr != nil {
+			s.logger.Error("failed to update message status to pending after enqueue failure",
+				zap.String("message_id", msg.ID.String()),
+				zap.Error(recordErr),
+			)
+		}
+		return EnqueueWhatsAppMessageResult{}, fmt.Errorf("enqueue delivery task: %w", err)
+	}
+
+	return EnqueueWhatsAppMessageResult{Message: *msg}, nil
+}
+
+func (s *MessageServiceImpl) EnqueueWhatsAppMessageForShop(ctx context.Context, shop *domain.Shop, phoneNumber, body string, templateBodyParams []string) (EnqueueWhatsAppMessageResult, error) {
+	if phoneNumber == "" {
+		return EnqueueWhatsAppMessageResult{}, errEmptyPhoneNumber
+	}
+
+	lang := shop.WhatsAppTemplateLanguage
+	if lang == "" {
+		lang = "en_US"
+	}
+
+	msg := &domain.Message{
+		ID:               uuid.New(),
+		PhoneNumber:      phoneNumber,
+		Body:             body,
+		Status:           domain.MessageStatusQueued,
+		TemplateName:     shop.WhatsAppTemplateName,
+		TemplateLanguage: lang,
+		ShopID:           shop.ID,
+	}
+
+	if len(templateBodyParams) > 0 {
+		params := domain.TemplateParams{
+			Body: make([]domain.TemplateParam, 0, len(templateBodyParams)),
+		}
+		for _, p := range templateBodyParams {
+			params.Body = append(params.Body, domain.TemplateParam{
+				Type: "text",
+				Text: p,
+			})
+		}
+		raw, _ := json.Marshal(params)
+		msg.TemplateParams = raw
+	}
+
+	if err := s.repo.Create(ctx, msg); err != nil {
+		return EnqueueWhatsAppMessageResult{}, fmt.Errorf("persist message: %w", err)
+	}
+
+	if err := s.queue.EnqueueMessageDelivery(ctx, msg.ID); err != nil {
+		s.logger.Error("message persisted but enqueue failed, leaving as pending",
+			zap.String("message_id", msg.ID.String()),
+			zap.String("shop_id", shop.ID),
 			zap.Error(err),
 		)
 		recordErr := s.repo.UpdateStatus(ctx, msg.ID, domain.MessageStatusPending)

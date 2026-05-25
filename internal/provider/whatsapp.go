@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"time"
 
 	"social-notif/internal/apperror"
 	"social-notif/internal/config"
@@ -48,6 +49,18 @@ func NewMetaWhatsAppClient(cfg config.WhatsAppConfig) *MetaWhatsAppClient {
 		accessToken:   cfg.AccessToken,
 		httpClient: &http.Client{
 			Timeout: cfg.Timeout,
+		},
+	}
+}
+
+func NewMetaWhatsAppClientFromConfig(baseURL, apiVersion, phoneNumberID, accessToken string) *MetaWhatsAppClient {
+	return &MetaWhatsAppClient{
+		baseURL:       baseURL,
+		apiVersion:    apiVersion,
+		phoneNumberID: phoneNumberID,
+		accessToken:   accessToken,
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
 		},
 	}
 }

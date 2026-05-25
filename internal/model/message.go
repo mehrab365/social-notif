@@ -22,6 +22,7 @@ type MessageRecord struct {
 	TemplateName     string               `gorm:"column:template_name;type:varchar(128)"`
 	TemplateLanguage string               `gorm:"column:template_language;type:varchar(16);not null;default:'en_US'"`
 	TemplateParams   json.RawMessage      `gorm:"column:template_params;type:jsonb"`
+	ShopID           uuid.UUID            `gorm:"column:shop_id;type:uuid"`
 }
 
 func (MessageRecord) TableName() string {
@@ -44,6 +45,10 @@ func MessageRecordFromDomain(message *domain.Message) *MessageRecord {
 	}
 
 	message.EnsureDefaults()
+	var shopID uuid.UUID
+	if message.ShopID != "" {
+		shopID = uuid.MustParse(message.ShopID)
+	}
 	return &MessageRecord{
 		ID:               message.ID,
 		PhoneNumber:      message.PhoneNumber,
@@ -56,6 +61,7 @@ func MessageRecordFromDomain(message *domain.Message) *MessageRecord {
 		TemplateName:     message.TemplateName,
 		TemplateLanguage: message.TemplateLanguage,
 		TemplateParams:   message.TemplateParams,
+		ShopID:           shopID,
 	}
 }
 
@@ -64,6 +70,10 @@ func (m *MessageRecord) ToDomain() *domain.Message {
 		return nil
 	}
 
+	var shopID string
+	if m.ShopID != uuid.Nil {
+		shopID = m.ShopID.String()
+	}
 	return &domain.Message{
 		ID:               m.ID,
 		PhoneNumber:      m.PhoneNumber,
@@ -76,5 +86,6 @@ func (m *MessageRecord) ToDomain() *domain.Message {
 		TemplateName:     m.TemplateName,
 		TemplateLanguage: m.TemplateLanguage,
 		TemplateParams:   m.TemplateParams,
+		ShopID:           shopID,
 	}
 }

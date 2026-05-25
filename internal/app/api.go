@@ -44,17 +44,20 @@ func RunAPI(ctx context.Context) error {
 	}
 
 	msgRepo := repository.NewMessageRepository(db)
+	shopRepo := repository.NewShopRepository(db)
 	asynqClient := asynq.NewClient(worker.AsynqRedisOptions(cfg.Redis))
 	msgQueue := queue.NewAsynqMessageQueue(asynqClient)
 	msgSvc := service.NewMessageService(msgRepo, msgQueue, logger)
 	msgHandler := handler.NewMessageHandler(msgSvc, logger)
+	shopifyAuthHandler := handler.NewShopifyAuthHandler(cfg, logger, shopRepo, msgSvc)
 
 	router := api.NewRouter(api.Dependencies{
-		Config:         cfg,
-		Logger:         logger,
-		DB:             db,
-		Redis:          redisClient,
-		MessageHandler: msgHandler,
+		Config:             cfg,
+		Logger:             logger,
+		DB:                 db,
+		Redis:              redisClient,
+		MessageHandler:     msgHandler,
+		ShopifyAuthHandler: shopifyAuthHandler,
 	})
 
 	server := &http.Server{

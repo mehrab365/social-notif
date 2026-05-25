@@ -33,6 +33,7 @@ func RunWorker(ctx context.Context) error {
 	}
 
 	msgRepo := repository.NewMessageRepository(db)
+	shopRepo := repository.NewShopRepository(db)
 	whatsAppClient := provider.NewMetaWhatsAppClient(cfg.WhatsApp)
 
 	redisOpt := worker.AsynqRedisOptions(cfg.Redis)
@@ -46,11 +47,13 @@ func RunWorker(ctx context.Context) error {
 
 	mux := asynq.NewServeMux()
 	worker.RegisterHandlers(mux, worker.Dependencies{
-		Config:      cfg,
-		Logger:      logger,
-		DB:          db,
-		MessageRepo: msgRepo,
-		Provider:    whatsAppClient,
+		Config:          cfg,
+		Logger:          logger,
+		DB:              db,
+		MessageRepo:     msgRepo,
+		ShopRepo:        shopRepo,
+		Provider:        whatsAppClient,
+		ProviderFactory: &worker.DefaultProviderFactory{BaseURL: cfg.WhatsApp.BaseURL, APIVersion: cfg.WhatsApp.APIVersion},
 	})
 
 	go func() {

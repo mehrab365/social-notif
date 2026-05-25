@@ -1,6 +1,10 @@
 package handler
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
 
 type APIResponse struct {
 	Data      any    `json:"data,omitempty"`
@@ -23,6 +27,16 @@ func Respond(c *gin.Context, status int, data any) {
 func RespondError(c *gin.Context, status int, code, message string) {
 	c.JSON(status, APIResponse{
 		Error: APIError{
+			Code:    code,
+			Message: message,
+		},
+		RequestID: requestID(c),
+	})
+}
+
+func RespondSuccess(c *gin.Context, code, message string) {
+	c.JSON(http.StatusOK, APIResponse{
+		Data: APIError{
 			Code:    code,
 			Message: message,
 		},

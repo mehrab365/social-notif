@@ -47,6 +47,8 @@ func NewRouter(deps Dependencies) http.Handler {
 	router.GET("/healthz", healthHandler.Liveness)
 	router.GET("/readyz", healthHandler.Readiness)
 
+	router.GET("/", handler.GetStatus(deps.Config))
+
 	if deps.ShopifyAuthHandler != nil {
 		router.GET("/api/v1/shopify/auth", deps.ShopifyAuthHandler.Authorize)
 		router.GET("/api/v1/shopify/callback", deps.ShopifyAuthHandler.Callback)
